@@ -1,7 +1,7 @@
 defmodule Indexer.Fetcher.EmptyBlocksSanitizer do
   @moduledoc """
   Periodically checks empty blocks starting from the head of the chain, detects for which blocks transactions should be refetched
-  and lose consensus for block in order to refetch transactions.
+  and set refetch_needed=true for block in order to refetch transactions.
   """
 
   use GenServer
@@ -10,7 +10,7 @@ defmodule Indexer.Fetcher.EmptyBlocksSanitizer do
   require Logger
 
   import Ecto.Query, only: [from: 2, subquery: 1, where: 3]
-  import EthereumJSONRPC, only: [id_to_params: 1, json_rpc: 2, quantity_to_integer: 1]
+  import EthereumJSONRPC, only: [id_to_params: 1, integer_to_quantity: 1, json_rpc: 2, quantity_to_integer: 1]
 
   alias EthereumJSONRPC.Block.ByNumber
   alias EthereumJSONRPC.Blocks
@@ -88,7 +88,7 @@ defmodule Indexer.Fetcher.EmptyBlocksSanitizer do
     unless Enum.empty?(unprocessed_empty_blocks_list) do
       blocks_response =
         unprocessed_empty_blocks_list
-        |> Enum.map(fn {block_number, _} -> %{number: block_number} end)
+        |> Enum.map(fn {block_number, _} -> %{number: integer_to_quantity(block_number)} end)
         |> id_to_params()
         |> Blocks.requests(&ByNumber.request(&1, false, false))
         |> json_rpc(json_rpc_named_arguments)
@@ -147,7 +147,7 @@ defmodule Indexer.Fetcher.EmptyBlocksSanitizer do
 
     log_message =
       log_message_base <>
-        ", but those blocks are empty in Blockscout DB. Setting consensus = false for it to re-fetch."
+        ", but those blocks are empty in Blockscout DB. Setting refetch_needed = true for it to re-fetch."
 
     Logger.info(
       log_message,
@@ -210,6 +210,7 @@ defmodule Indexer.Fetcher.EmptyBlocksSanitizer do
       where: is_nil(block.is_empty),
       where: block.number <= ^safe_block_number,
       where: block.consensus == true,
+      where: block.refetch_needed == false,
       order_by: [asc: block.hash],
       limit: ^limit
     )
