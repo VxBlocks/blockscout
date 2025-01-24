@@ -25,7 +25,13 @@ defmodule BlockScoutWeb.CaptchaHelper do
   @spec recaptcha_passed?(%{String.t() => String.t()} | nil) :: bool
   def recaptcha_passed?(%{"recaptcha_bypass_token" => given_bypass_token}) do
     bypass_token = Application.get_env(:block_scout_web, :recaptcha)[:bypass_token]
-    bypass_token != "" && given_bypass_token == bypass_token
+
+    if bypass_token != "" && given_bypass_token == bypass_token do
+      Logger.warning("reCAPTCHA bypass token used")
+      true
+    else
+      false
+    end
   end
 
   def recaptcha_passed?(%{"recaptcha_v3_response" => recaptcha_response}) do

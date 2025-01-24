@@ -235,7 +235,6 @@ disable_webapp? = ConfigHelper.parse_bool_env_var("DISABLE_WEBAPP")
 app_mode = ConfigHelper.mode()
 disable_exchange_rates? = ConfigHelper.parse_bool_env_var("DISABLE_EXCHANGE_RATES")
 
-checksum_function = System.get_env("CHECKSUM_FUNCTION")
 exchange_rates_coin = System.get_env("EXCHANGE_RATES_COIN")
 
 config :explorer,
@@ -257,7 +256,6 @@ config :explorer,
      end),
   addresses_blacklist: System.get_env("ADDRESSES_BLACKLIST"),
   addresses_blacklist_key: System.get_env("ADDRESSES_BLACKLIST_KEY"),
-  checksum_function: checksum_function && String.to_atom(checksum_function),
   elasticity_multiplier: ConfigHelper.parse_integer_env_var("EIP_1559_ELASTICITY_MULTIPLIER", 2),
   base_fee_max_change_denominator: ConfigHelper.parse_integer_env_var("EIP_1559_BASE_FEE_MAX_CHANGE_DENOMINATOR", 8),
   csv_export_limit: ConfigHelper.parse_integer_env_var("CSV_EXPORT_LIMIT", 10_000),
@@ -1068,6 +1066,16 @@ config :indexer, Indexer.Fetcher.Arbitrum.RollupMessagesCatchup.Supervisor,
 
 config :indexer, Indexer.Fetcher.Arbitrum.MessagesToL2Matcher.Supervisor,
   disabled?: not ConfigHelper.parse_bool_env_var("INDEXER_ARBITRUM_BRIDGE_MESSAGES_TRACKING_ENABLED")
+
+config :indexer, Indexer.Fetcher.Arbitrum.DataBackfill,
+  recheck_interval:
+    ConfigHelper.parse_time_env_var("INDEXER_ARBITRUM_DATA_BACKFILL_UNINDEXED_BLOCKS_RECHECK_INTERVAL", "120s"),
+  backfill_blocks_depth: ConfigHelper.parse_integer_env_var("INDEXER_ARBITRUM_DATA_BACKFILL_BLOCKS_DEPTH", 500)
+
+config :indexer, Indexer.Fetcher.Arbitrum.DataBackfill.Supervisor,
+  disabled?:
+    ConfigHelper.chain_type() != :arbitrum ||
+      not ConfigHelper.parse_bool_env_var("INDEXER_ARBITRUM_DATA_BACKFILL_ENABLED")
 
 config :indexer, Indexer.Fetcher.RootstockData.Supervisor,
   disabled?:
